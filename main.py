@@ -12,7 +12,6 @@ def process_data_batch(batch: List[object], callback: Callable):
 
 class BatchProcessor:
     def __init__(self, max_batch_delay: int, batch_size: int) -> None:
-        ray.init()
         self.max_batch_delay = max_batch_delay
         self.internal_queue = Queue(maxsize=500)
         self.batch_size = batch_size
@@ -45,15 +44,13 @@ class BatchProcessor:
         while True:
             self.fire()
 
-    def stop(self):
-        size_queue = self.internal_queue.size()
-        batch = self.internal_queue.get_nowait_batch(size_queue)
-        self.result_ids.append(self.process_data_batch.remote(batch, self.callback))
-        result = self.collect()
-        print(result)
-
     def register_callback(self, callback: Callable):
         self.callback = callback
 
     def add_work(self, work: object):
         self.internal_queue.put(work)
+
+
+@ray.remote
+def start_batch_processor(batch_processor: BatchProcessor):
+    batch_processor.start()
